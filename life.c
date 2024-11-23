@@ -10,6 +10,28 @@ int grid[32][100];
 // 2: 残像
 // 3: 移動済みセル　を表す
 
+struct Cell
+{
+    int hp;
+};
+
+// void attack(int i, int j)
+// {
+// }
+
+int canMove(int i, int j)
+{
+    if (i < 0 || height - 1 < i || j < 0 || width - 1 < j)
+    {
+        return 0;
+    }
+    else if (grid[i][j] > 0)
+    {
+        return 0;
+    }
+    return 1;
+}
+
 void setupGrid(int grid[height][width])
 {
     int i, j;
@@ -33,47 +55,41 @@ void setupGrid(int grid[height][width])
     }
 }
 
-// void attack(int i, int j)
-// {
-// }
-
 void move(int i, int j)
 {
+    // fall through
     switch (rand() % 4)
     {
     case 0:
-        if (i == height - 1)
+        if (canMove(i + 1, j))
         {
+            grid[i][j] = 2;
+            grid[i + 1][j] = 3;
             break;
         }
-        grid[i][j] = 2;
-        grid[i + 1][j] = 3;
-        break;
     case 1:
-        if (i == 0)
+        if (canMove(i - 1, j))
         {
+            grid[i][j] = 2;
+            grid[i - 1][j] = 3;
             break;
         }
-        grid[i][j] = 2;
-        grid[i - 1][j] = 3;
-        break;
     case 2:
-        if (j == width - 1)
+        if (canMove(i, j + 1))
         {
+            grid[i][j] = 2;
+            grid[i][j + 1] = 3;
             break;
         }
-        grid[i][j] = 2;
-        grid[i][j + 1] = 3;
-        break;
     case 3:
-        if (j == 0)
+        if (canMove(i, j - 1))
         {
+            grid[i][j] = 2;
+            grid[i][j - 1] = 3;
             break;
         }
-        grid[i][j] = 2;
-        grid[i][j - 1] = 3;
-        break;
     default:
+        grid[i][j] = 3;
         break;
     }
 }
