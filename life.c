@@ -19,8 +19,7 @@ struct Cell grid[HEIGHT][WIDTH];
 // 1: 残像
 // 2: 死体
 // 3: 通常セル
-// 4: 移動後セル
-// を表す
+// 4: 移動後セル を表す
 
 void spawnCell(int i, int j)
 {
@@ -60,13 +59,13 @@ void eatCell(int i, int j)
     grid[i][j].state = 0;
 }
 
-int canMove(int i, int j)
+int canMove(int iNext, int jNext)
 {
-    if (i < 0 || height - 1 < i || j < 0 || width - 1 < j)
+    if (iNext < 0 || height - 1 < iNext || jNext < 0 || width - 1 < jNext)
     {
         return 0;
     }
-    else if (grid[i][j].state >= 3)
+    else if (grid[iNext][jNext].state >= 3)
     {
         return 0;
     }
@@ -77,44 +76,35 @@ void move(int i, int j)
 {
     grid[i][j].hp--;
 
-    // fall through
-    switch (rand() % 5)
+    int iNext, jNext;
+    switch (rand() % 10)
     {
     case 0:
-        if (canMove(i + 1, j))
-        {
-            grid[i + 1][j] = grid[i][j];
-            grid[i + 1][j].state = 4;
-            resetCell(i, j);
-            break;
-        }
-    case 1:
-        if (canMove(i - 1, j))
-        {
-            grid[i - 1][j] = grid[i][j];
-            grid[i - 1][j].state = 4;
-            resetCell(i, j);
-            break;
-        }
-    case 2:
-        if (canMove(i, j + 1))
-        {
-            grid[i][j + 1] = grid[i][j];
-            grid[i][j + 1].state = 4;
-            resetCell(i, j);
-            break;
-        }
-    case 3:
-        if (canMove(i, j - 1))
-        {
-            grid[i][j - 1] = grid[i][j];
-            grid[i][j - 1].state = 4;
-            resetCell(i, j);
-            break;
-        }
-    default:
-        grid[i][j].state = 4;
+        iNext = i + 1;
+        jNext = j;
         break;
+    case 1:
+        iNext = i - 1;
+        jNext = j;
+        break;
+    case 2:
+        iNext = i;
+        jNext = j + 1;
+        break;
+    case 3:
+        iNext = i;
+        jNext = j - 1;
+        break;
+    default:
+        iNext = i; // 移動しない場合はcanMoveがfalse
+        jNext = j; // hpが減るだけ
+        break;
+    }
+    if (canMove(iNext, jNext))
+    {
+        grid[iNext][jNext] = grid[i][j];
+        grid[iNext][jNext].state = 4;
+        resetCell(i, j);
     }
 }
 
@@ -159,7 +149,8 @@ void printGrid(int i, int j)
         break;
     case 3: // 通常セル
     case 4: // 移動後セル
-        putchar('@');
+        // putchar('@');
+        printf("%i", grid[i][j].hp % 10);
         break;
     default:
         putchar(' ');
