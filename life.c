@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
-
+// 画面サイズに合わせて変更
 #define HEIGHT 31
 #define WIDTH 99
 
@@ -16,27 +16,16 @@ struct Cell
 
 struct Cell grid[HEIGHT][WIDTH];
 // 0: 空白
-// 1: セル
-// 2: 残像
-// 3: 移動済みセル　を表す
+// 1: 残像
+// 2: 死体
+// 3: 通常セル
+// 4: 移動後セル
+// を表す
 
 void spawnCell(int i, int j)
 {
     grid[i][j].hp = 100 + rand() % 100;
     grid[i][j].state = 3;
-}
-
-int canMove(int i, int j)
-{
-    if (i < 0 || height - 1 < i || j < 0 || width - 1 < j)
-    {
-        return 0;
-    }
-    else if (grid[i][j].state > 0)
-    {
-        return 0;
-    }
-    return 1;
 }
 
 void setupGrid()
@@ -46,11 +35,7 @@ void setupGrid()
     {
         for (j = 0; j < width; j++)
         {
-            if (i == height / 2 && j == width / 2)
-            {
-                spawnCell(i, j);
-            }
-            else if (i % 10 == 0 && j % 10 == 0)
+            if (i % 10 == 0 && j % 10 == 0)
             {
                 spawnCell(i, j);
             }
@@ -66,7 +51,26 @@ void setupGrid()
 void resetCell(int i, int j)
 {
     grid[i][j].hp = 0;
-    grid[i][j].state = 2;
+    grid[i][j].state = 1;
+}
+
+// 食べる
+void eatCell(int i, int j)
+{
+    grid[i][j].state = 0;
+}
+
+int canMove(int i, int j)
+{
+    if (i < 0 || height - 1 < i || j < 0 || width - 1 < j)
+    {
+        return 0;
+    }
+    else if (grid[i][j].state >= 3)
+    {
+        return 0;
+    }
+    return 1;
 }
 
 void move(int i, int j)
@@ -80,7 +84,7 @@ void move(int i, int j)
         if (canMove(i + 1, j))
         {
             grid[i + 1][j] = grid[i][j];
-            grid[i + 1][j].state = 3;
+            grid[i + 1][j].state = 4;
             resetCell(i, j);
             break;
         }
@@ -88,7 +92,7 @@ void move(int i, int j)
         if (canMove(i - 1, j))
         {
             grid[i - 1][j] = grid[i][j];
-            grid[i - 1][j].state = 3;
+            grid[i - 1][j].state = 4;
             resetCell(i, j);
             break;
         }
@@ -96,7 +100,7 @@ void move(int i, int j)
         if (canMove(i, j + 1))
         {
             grid[i][j + 1] = grid[i][j];
-            grid[i][j + 1].state = 3;
+            grid[i][j + 1].state = 4;
             resetCell(i, j);
             break;
         }
@@ -104,12 +108,12 @@ void move(int i, int j)
         if (canMove(i, j - 1))
         {
             grid[i][j - 1] = grid[i][j];
-            grid[i][j - 1].state = 3;
+            grid[i][j - 1].state = 4;
             resetCell(i, j);
             break;
         }
     default:
-        grid[i][j].state = 3;
+        grid[i][j].state = 4;
         break;
     }
 }
@@ -121,13 +125,13 @@ void updateGrid()
     {
         for (j = 0; j < width; j++)
         {
-            if (grid[i][j].state == 2)
+            if (grid[i][j].state == 1) // 残像の場合は空白へ
             {
                 grid[i][j].state = 0;
             }
-            else if (grid[i][j].state == 3)
+            else if (grid[i][j].state == 4) // 移動後フラグを解除
             {
-                grid[i][j].state = 1;
+                grid[i][j].state = 3;
             }
         }
     }
@@ -135,7 +139,7 @@ void updateGrid()
     {
         for (j = 0; j < width; j++)
         {
-            if (grid[i][j].state == 1)
+            if (grid[i][j].state == 3)
             {
                 move(i, j);
             }
@@ -143,14 +147,18 @@ void updateGrid()
     }
 }
 
-void printGrid(int state)
+void printGrid(int i, int j)
 {
-    switch (state)
+    switch (grid[i][j].state)
     {
-    case 2:
+    case 1: // 残像
         printf("\x1b[90m%c\x1b[0m", '@');
         break;
-    case 3:
+    case 2: // 死体
+        printf("\x1b[91m%c\x1b[0m", '@');
+        break;
+    case 3: // 通常セル
+    case 4: // 移動後セル
         putchar('@');
         break;
     default:
@@ -171,12 +179,11 @@ int main()
         {
             for (j = 0; j < width; j++)
             {
-                printGrid(grid[i][j].state);
-
+                printGrid(i, j);
                 // 死亡のテスト
-                if (grid[i][j].hp == 0)
+                if (grid[i][j].hp == 0 && grid[i][j].state >= 3)
                 {
-                    grid[i][j].state = 0;
+                    grid[i][j].state = 2;
                 }
             }
             printf("\n");
