@@ -12,19 +12,22 @@ struct Cell
 {
     int hp;
     int state;
+    int movedFlag;
 };
 
 struct Cell grid[HEIGHT][WIDTH];
+int turnFlag = 1;
+
 // 0: 空白
 // 1: 残像
 // 2: 死体
-// 3: 通常セル
-// 4: 移動後セル を表す
+// 3: セル を表す
 
 void spawnCell(int i, int j)
 {
     grid[i][j].hp = 100 + rand() % 100;
     grid[i][j].state = 3;
+    grid[i][j].movedFlag = turnFlag;
 }
 
 void setupGrid()
@@ -42,6 +45,7 @@ void setupGrid()
             {
                 grid[i][j].hp = 0;
                 grid[i][j].state = 0;
+                grid[i][j].movedFlag = 0;
             }
         }
     }
@@ -51,6 +55,7 @@ void resetCell(int i, int j)
 {
     grid[i][j].hp = 0;
     grid[i][j].state = 1;
+    grid[i][j].movedFlag = 0;
 }
 
 // 食べる
@@ -65,7 +70,7 @@ int canMove(int iNext, int jNext)
     {
         return 0;
     }
-    else if (grid[iNext][jNext].state >= 3)
+    else if (grid[iNext][jNext].state == 3)
     {
         return 0;
     }
@@ -76,35 +81,33 @@ void move(int i, int j)
 {
     grid[i][j].hp--;
 
-    int iNext, jNext;
+    int iNext = i, jNext = j;
     switch (rand() % 10)
     {
     case 0:
-        iNext = i + 1;
-        jNext = j;
+        iNext++;
         break;
     case 1:
-        iNext = i - 1;
-        jNext = j;
+        iNext--;
         break;
     case 2:
-        iNext = i;
-        jNext = j + 1;
+        jNext++;
         break;
     case 3:
-        iNext = i;
-        jNext = j - 1;
+        jNext--;
         break;
-    default:
-        iNext = i; // 移動しない場合はcanMoveがfalse
-        jNext = j; // hpが減るだけ
-        break;
+    default:   // 移動しない場合はcanMoveがfalse
+        break; // hpが減るだけ
     }
     if (canMove(iNext, jNext))
     {
         grid[iNext][jNext] = grid[i][j];
-        grid[iNext][jNext].state = 4;
         resetCell(i, j);
+        grid[iNext][jNext].movedFlag *= -1;
+    }
+    else
+    {
+        grid[i][j].movedFlag *= -1;
     }
 }
 
@@ -115,26 +118,17 @@ void updateGrid()
     {
         for (j = 0; j < width; j++)
         {
-            if (grid[i][j].state == 1) // 残像の場合は空白へ
-            {
-                grid[i][j].state = 0;
-            }
-            else if (grid[i][j].state == 4) // 移動後フラグを解除
-            {
-                grid[i][j].state = 3;
-            }
-        }
-    }
-    for (i = 0; i < height; i++)
-    {
-        for (j = 0; j < width; j++)
-        {
-            if (grid[i][j].state == 3)
+            if (turnFlag == grid[i][j].movedFlag)
             {
                 move(i, j);
             }
+            else if (grid[i][j].state == 1) // 残像の場合は空白へ
+            {
+                grid[i][j].state = 0;
+            }
         }
     }
+    turnFlag *= -1;
 }
 
 void printGrid(int i, int j)
@@ -147,10 +141,10 @@ void printGrid(int i, int j)
     case 2: // 死体
         printf("\x1b[91m%c\x1b[0m", '@');
         break;
-    case 3: // 通常セル
-    case 4: // 移動後セル
-        // putchar('@');
-        printf("%i", grid[i][j].hp % 10);
+    case 3: // セル
+        putchar('@');
+        // printf("%i", grid[i][j].hp % 10);
+        // printf("%i", grid[i][j].movedFlag % 10);
         break;
     default:
         putchar(' ');
@@ -172,9 +166,10 @@ int main()
             {
                 printGrid(i, j);
                 // 死亡のテスト
-                if (grid[i][j].hp == 0 && grid[i][j].state >= 3)
+                if (grid[i][j].hp <= 0 && grid[i][j].state == 3)
                 {
                     grid[i][j].state = 2;
+                    grid[i][j].movedFlag = 0;
                 }
             }
             printf("\n");
