@@ -11,23 +11,23 @@ int width = WIDTH;
 struct Cell
 {
     int hp;
+    int maxHp;
+    // 0: 空白, 1: 残像, 2: 死体, 3: セル を表す
     int state;
     int movedFlag;
+    int age;
 };
 
 struct Cell grid[HEIGHT][WIDTH];
 int turnFlag = 1;
 
-// 0: 空白
-// 1: 残像
-// 2: 死体
-// 3: セル を表す
-
 void spawnCell(int i, int j)
 {
     grid[i][j].hp = 100 + rand() % 100;
+    grid[i][j].maxHp = grid[i][j].hp;
     grid[i][j].state = 3;
     grid[i][j].movedFlag = turnFlag;
+    grid[i][j].age = rand() % 10;
 }
 
 void setupGrid()
@@ -46,6 +46,7 @@ void setupGrid()
                 grid[i][j].hp = 0;
                 grid[i][j].state = 0;
                 grid[i][j].movedFlag = 0;
+                grid[i][j].age = 0;
             }
         }
     }
@@ -56,12 +57,17 @@ void resetCell(int i, int j)
     grid[i][j].hp = 0;
     grid[i][j].state = 1;
     grid[i][j].movedFlag = 0;
+    grid[i][j].age = 0;
 }
 
-// 食べる
-void eatCell(int i, int j)
+void eatCell(int i, int j, int iNext, int jNext)
 {
-    grid[i][j].state = 0;
+    grid[i][j].hp += grid[i][j].maxHp;
+}
+
+void attackCell(int i, int j, int iNext, int jNext)
+{
+    grid[iNext][jNext].hp -= grid[i][j].maxHp / 10;
 }
 
 int canMove(int iNext, int jNext)
@@ -101,6 +107,14 @@ void move(int i, int j)
     }
     if (canMove(iNext, jNext))
     {
+        if (grid[iNext][jNext].state == 3)
+        {
+            attackCell(i, j, iNext, jNext);
+        }
+        else if (grid[iNext][jNext].state == 2)
+        {
+            eatCell(i, j, iNext, jNext);
+        }
         grid[iNext][jNext] = grid[i][j];
         resetCell(i, j);
         grid[iNext][jNext].movedFlag *= -1;
@@ -111,6 +125,16 @@ void move(int i, int j)
     }
 }
 
+void splitCell(int i, int j)
+{
+    if (canMove(i, j - 1))
+    {
+        spawnCell(i, j - 1);
+        grid[i][j].hp = grid[i][j].hp * 2 / 3;
+        grid[i][j - 1].hp = grid[i][j - 1].hp * 2 / 3;
+    }
+}
+
 void updateGrid()
 {
     int i, j;
@@ -118,6 +142,16 @@ void updateGrid()
     {
         for (j = 0; j < width; j++)
         {
+            grid[i][j].age++;
+
+            if ((grid[i][j].hp <= 0 || grid[i][j].age > 100) && grid[i][j].state == 3) // 死亡判定
+            {
+                grid[i][j].state = 2;
+                grid[i][j].hp = 0;
+                grid[i][j].movedFlag = 0;
+                grid[i][j].age = 0;
+            }
+
             if (turnFlag == grid[i][j].movedFlag)
             {
                 move(i, j);
@@ -125,6 +159,11 @@ void updateGrid()
             else if (grid[i][j].state == 1) // 残像の場合は空白へ
             {
                 grid[i][j].state = 0;
+            }
+
+            if (grid[i][j].age % 40 == 0 && grid[i][j].state == 3) // 生殖のテスト
+            {
+                splitCell(i, j);
             }
         }
     }
@@ -165,12 +204,6 @@ int main()
             for (j = 0; j < width; j++)
             {
                 printGrid(i, j);
-                // 死亡のテスト
-                if (grid[i][j].hp <= 0 && grid[i][j].state == 3)
-                {
-                    grid[i][j].state = 2;
-                    grid[i][j].movedFlag = 0;
-                }
             }
             printf("\n");
         }
